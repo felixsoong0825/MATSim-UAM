@@ -16,7 +16,10 @@ import org.matsim.core.controler.AbstractModule;
 import org.matsim.core.network.NetworkUtils;
 import org.matsim.core.network.algorithms.NetworkCleaner;
 import org.matsim.core.network.algorithms.TransportModeNetworkFilter;
+import org.matsim.core.router.AnalysisMainModeIdentifier;
 import org.matsim.core.router.DijkstraFactory;
+import org.matsim.core.router.MainModeIdentifier;
+import org.matsim.core.router.MainModeIdentifierImpl;
 import org.matsim.core.router.costcalculators.OnlyTimeDependentTravelDisutility;
 import org.matsim.core.router.util.LeastCostPathCalculator;
 import org.matsim.core.router.util.TravelTime;
@@ -42,6 +45,7 @@ import net.bhl.matsim.uam.infrastructure.readers.UAMXMLReader;
 import net.bhl.matsim.uam.listeners.UAMListener;
 import net.bhl.matsim.uam.listeners.UAMShutdownListener;
 import net.bhl.matsim.uam.qsim.UAMQSimModule;
+import net.bhl.matsim.uam.router.UAMMainModeIdentifier;
 import net.bhl.matsim.uam.router.UAMRoutingModuleProvider;
 import net.bhl.matsim.uam.scoring.UAMScoringFunctionFactory;
 
@@ -96,8 +100,13 @@ public class UAMModule extends AbstractDvrpModeModule {
 		// we still need to provide a way to identify our trips
 		// as being uam trips.
 		// This is for instance used at re-routing.
-		// bind(MainModeIdentifier.class).toInstance(new UAMMainModeIdentifier(new
-		// MainModeIdentifierImpl()));
+		UAMMainModeIdentifier uamMainModeIdentifier = new UAMMainModeIdentifier(new MainModeIdentifierImpl());
+		bind(MainModeIdentifier.class).toInstance(uamMainModeIdentifier);
+		// separate binding key used by ModeStatsControlerListener (iteration
+		// mode-share reporting) -- without this it falls back to
+		// DefaultAnalysisMainModeIdentifier, which throws "unknown modes" for
+		// uam/access_uam_car/egress_uam_car legs.
+		bind(AnalysisMainModeIdentifier.class).toInstance(uamMainModeIdentifier);
 
 		// here we provide vehicles and network to be used for uam trips
 		// bind(VehicleType.class).annotatedWith(Names.named(UAMConstants.uam))
