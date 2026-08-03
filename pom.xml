@@ -13,6 +13,7 @@
 		<matsim.version>2024.0</matsim.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
+		<maven.compiler.release>21</maven.compiler.release>
 	</properties>
 	
 	<distributionManagement>
@@ -79,6 +80,17 @@
 			<groupId>org.matsim</groupId>
 			<artifactId>matsim</artifactId>
 			<version>${matsim.version}</version>
+			<exclusions>
+				<!-- jai_imageio duplicates com.sun.media.imageioimpl.stream.* classes
+				     also provided by imageio-ext-streams (pulled in via the same
+				     jai_core dependency); assembly-plugin's "last one wins" class
+				     merge picks an inconsistent mix of the two, causing
+				     IIOServiceProvider's vendorName to be null at runtime. -->
+				<exclusion>
+					<groupId>javax.media</groupId>
+					<artifactId>jai_imageio</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>org.matsim.contrib</groupId>

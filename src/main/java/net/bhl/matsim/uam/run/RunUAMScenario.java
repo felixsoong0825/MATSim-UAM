@@ -5,6 +5,8 @@ import net.bhl.matsim.uam.config.UAMConfigGroup;
 import net.bhl.matsim.uam.qsim.UAMQSimModule;
 import net.bhl.matsim.uam.qsim.UAMSpeedModule;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.contribs.discrete_mode_choice.modules.DiscreteModeChoiceModule;
+import org.matsim.contribs.discrete_mode_choice.modules.config.DiscreteModeChoiceConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpConfigGroup;
 import org.matsim.contrib.dvrp.run.DvrpModule;
 import org.matsim.core.config.CommandLine;
@@ -56,11 +58,13 @@ public class RunUAMScenario {
 	}
 
 	public static Config createConfig() {
-		return config = ConfigUtils.createConfig(uamConfigGroup, new DvrpConfigGroup());
+		return config = ConfigUtils.createConfig(uamConfigGroup, new DvrpConfigGroup(),
+				new DiscreteModeChoiceConfigGroup());
 	}
 
 	public static Config setConfig(String path) {
-		return config = ConfigUtils.loadConfig(path, uamConfigGroup, new DvrpConfigGroup());
+		return config = ConfigUtils.loadConfig(path, uamConfigGroup, new DvrpConfigGroup(),
+				new DiscreteModeChoiceConfigGroup());
 	}
 
 	public static Scenario createScenario() {
@@ -83,6 +87,18 @@ public class RunUAMScenario {
 		controler = new Controler(scenario);
 
 		controler.addOverridingModule(new DvrpModule());
+
+		// Installs the discrete_mode_choice contrib's own Guice bindings (its
+		// classes were already on the classpath as a pom.xml dependency, but
+		// were never wired in -- this is what previously caused "PlanSelector
+		// is not explicitly bound" when a config tried to use
+		// strategyName=DiscreteModeChoice / planSelectorForRemoval=
+		// NonSelectedPlanSelector). Safe to always install: it only adds a
+		// named "DiscreteModeChoice" strategy provider and a conditional
+		// NonSelectedPlanSelector binding (only activated if the config's
+		// planSelectorForRemoval is actually set to that string) -- inert for
+		// scenarios that don't reference either.
+		controler.addOverridingModule(new DiscreteModeChoiceModule());
 
 		controler.addOverridingModule(new UAMModule(config));
 		controler.addOverridingQSimModule(new UAMSpeedModule());
