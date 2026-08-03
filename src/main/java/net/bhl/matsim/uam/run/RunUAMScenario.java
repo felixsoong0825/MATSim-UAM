@@ -15,7 +15,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.QSimConfigGroup.StarttimeInterpretation;
 import org.matsim.core.config.groups.ScoringConfigGroup.ActivityParams;
-import org.matsim.core.config.groups.ScoringConfigGroup.ModeParams;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.scenario.ScenarioUtils;
 
@@ -114,9 +113,19 @@ public class RunUAMScenario {
 		controler.getConfig().qsim().setStartTime(0.0);
 
 		DvrpConfigGroup.get(config).networkModes = ImmutableSet.of("uam");
-		config.scoring().addModeParams(new ModeParams("access_uam_car"));
-		config.scoring().addModeParams(new ModeParams("egress_uam_car"));
-		config.scoring().addModeParams(new ModeParams("uam"));
+		// (The 3 config.scoring().addModeParams(new ModeParams(...)) calls that used
+		// to be here for access_uam_car/egress_uam_car/uam were removed: they ran
+		// AFTER config loading and silently overwrote whatever
+		// marginalUtilityOfTraveling_util_hr the XML config had already set for
+		// exactly these 3 modes with ModeParams's bare-constructor default (matching
+		// MATSim's generic "unrecognized mode" default, -6.0 -- same value seen on
+		// "ride"/"other"). build_uam_scenario.py's merge_uam_into_base_config already
+		// sets marginalUtilityOfTraveling_util_hr correctly for all 7 UAM_MODE_PARAMS
+		// modes (including these 3) before this ever runs, so these lines were purely
+		// redundant-and-harmful once that Python-side mechanism existed. Confirmed via
+		// a direct diff of the merged input config (-1.0) vs MATSim's own
+		// post-load output config (-6.0), with an "mode parameters for mode uam were
+		// just overwritten" log line pointing straight at this call site.
 		config.scoring()
 				.addActivityParams(new ActivityParams("uam_interaction").setScoringThisActivityAtAll(false));
 
