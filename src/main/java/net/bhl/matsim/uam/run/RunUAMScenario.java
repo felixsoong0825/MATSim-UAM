@@ -2,6 +2,8 @@ package net.bhl.matsim.uam.run;
 
 import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import net.bhl.matsim.uam.config.UAMConfigGroup;
+import net.bhl.matsim.uam.dmc.IdfUtilityModelConfigGroup;
+import net.bhl.matsim.uam.dmc.IdfUtilityModelExtension;
 import net.bhl.matsim.uam.qsim.UAMQSimModule;
 import net.bhl.matsim.uam.qsim.UAMSpeedModule;
 import org.matsim.api.core.v01.Scenario;
@@ -58,12 +60,12 @@ public class RunUAMScenario {
 
 	public static Config createConfig() {
 		return config = ConfigUtils.createConfig(uamConfigGroup, new DvrpConfigGroup(),
-				new DiscreteModeChoiceConfigGroup());
+				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup());
 	}
 
 	public static Config setConfig(String path) {
 		return config = ConfigUtils.loadConfig(path, uamConfigGroup, new DvrpConfigGroup(),
-				new DiscreteModeChoiceConfigGroup());
+				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup());
 	}
 
 	public static Scenario createScenario() {
@@ -98,6 +100,11 @@ public class RunUAMScenario {
 		// planSelectorForRemoval is actually set to that string) -- inert for
 		// scenarios that don't reference either.
 		controler.addOverridingModule(new DiscreteModeChoiceModule());
+		// Registers "IdfStyleTripScoring" as a selectable tripEstimator name
+		// alongside the contrib's own built-in "MATSimTripScoring" -- inert
+		// unless a config's DiscreteModeChoice.tripEstimator actually
+		// references it (see net.bhl.matsim.uam.dmc.IdfStyleTripEstimator).
+		controler.addOverridingModule(new IdfUtilityModelExtension());
 
 		controler.addOverridingModule(new UAMModule(config));
 		controler.addOverridingQSimModule(new UAMSpeedModule());
