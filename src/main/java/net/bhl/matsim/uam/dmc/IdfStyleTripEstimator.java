@@ -95,9 +95,31 @@ public class IdfStyleTripEstimator extends AbstractTripRouterEstimator {
 		}
 	}
 
+	// car_passenger is a deliberately fixed/captive exogenous segment in this
+	// project (see build_uam_scenario.py's LIVE_MODES, which excludes it from
+	// SubtourModeChoice's mutation set the same way) -- not a real utility
+	// model row, so it has no idfUtilityModel entry. A TripConstraint-based
+	// exclusion attempt (rejecting every mode but a trip's own initial one)
+	// did not work: MATSim kept reporting the class-default tripConstraints
+	// regardless of what config set, for reasons not fully pinned down (see
+	// apply_dmc_config's docstring). This is the actual fix: car_passenger is
+	// added to availableModes (so DMC estimates it as a real candidate for
+	// every trip) and given the selector's own clamped max/min utility here
+	// -- +700 when it's a trip's own initial mode (chosen with ~probability
+	// 1), -700 otherwise (never chosen for any other trip). Matches
+	// selector:MultinomialLogit's maximumUtility/minimumUtility (see
+	// apply_dmc_config).
+	private static final String CAR_PASSENGER_MODE = "car_passenger";
+	private static final double CLAMPED_MAX_UTILITY = 700.0;
+	private static final double CLAMPED_MIN_UTILITY = -700.0;
+
 	@Override
 	protected double estimateTrip(Person person, String mode, DiscreteModeChoiceTrip trip,
 			List<TripCandidate> candidates, List<? extends PlanElement> elements) {
+		if (mode.equals(CAR_PASSENGER_MODE)) {
+			return trip.getInitialMode().equals(CAR_PASSENGER_MODE) ? CLAMPED_MAX_UTILITY : CLAMPED_MIN_UTILITY;
+		}
+
 		double[] params = modeParameters.get(mode);
 		if (params == null) {
 			throw new RuntimeException("IdfStyleTripEstimator has no idfUtilityModel parameters for mode '" + mode
