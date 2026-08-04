@@ -108,14 +108,30 @@ public class RunUAMScenario {
 
 		controler.addOverridingModule(new UAMModule(config));
 		controler.addOverridingQSimModule(new UAMSpeedModule());
-		controler.addOverridingModule(new SwissRailRaptorModule());
+		// Corsica's real config already has a genuine transit schedule and
+		// useTransit=true, so SwissRailRaptor is needed for real pt routing.
+		// Munich's real config intentionally has NO schedule at all
+		// (useTransit=false -- its pt trips are teleported, pre-computed by
+		// an external demand model, see build_base_config_munich.py).
+		// Installing SwissRailRaptor / forcing useTransit=true unconditionally
+		// (as this used to do) crashes Munich: SwissRailRaptor's stop-finder
+		// returns a null "nearest stop" against an empty schedule, and the
+		// caller doesn't null-check before calling .getCoord() on it
+		// (confirmed via NullPointerException, 2026-08-04). Gate on whatever
+		// the scenario's own config already says instead of forcing it.
+		boolean hasRealTransit = config.transit().isUseTransit();
+		if (hasRealTransit) {
+			controler.addOverridingModule(new SwissRailRaptorModule());
+		}
 
 		controler.configureQSimComponents(configurator -> {
 			UAMQSimModule.activateModes().configure(configurator);
 		});
 
-		controler.getConfig().transit().setUseTransit(true);
-		controler.getConfig().transit().setUsingTransitInMobsim(true);
+		if (hasRealTransit) {
+			controler.getConfig().transit().setUseTransit(true);
+			controler.getConfig().transit().setUsingTransitInMobsim(true);
+		}
 		controler.getConfig().qsim().setSimStarttimeInterpretation(StarttimeInterpretation.onlyUseStarttime);
 		controler.getConfig().qsim().setStartTime(0.0);
 
