@@ -6,6 +6,8 @@ import net.bhl.matsim.uam.dmc.IdfUtilityModelConfigGroup;
 import net.bhl.matsim.uam.dmc.IdfUtilityModelExtension;
 import net.bhl.matsim.uam.qsim.UAMQSimModule;
 import net.bhl.matsim.uam.qsim.UAMSpeedModule;
+import net.bhl.matsim.uam.theta.ThetaExportConfigGroup;
+import net.bhl.matsim.uam.theta.ThetaExportModule;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.contribs.discrete_mode_choice.modules.DiscreteModeChoiceModule;
 import org.matsim.contribs.discrete_mode_choice.modules.config.DiscreteModeChoiceConfigGroup;
@@ -60,12 +62,14 @@ public class RunUAMScenario {
 
 	public static Config createConfig() {
 		return config = ConfigUtils.createConfig(uamConfigGroup, new DvrpConfigGroup(),
-				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup());
+				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup(),
+				new ThetaExportConfigGroup());
 	}
 
 	public static Config setConfig(String path) {
 		return config = ConfigUtils.loadConfig(path, uamConfigGroup, new DvrpConfigGroup(),
-				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup());
+				new DiscreteModeChoiceConfigGroup(), new IdfUtilityModelConfigGroup(),
+				new ThetaExportConfigGroup());
 	}
 
 	public static Scenario createScenario() {
@@ -105,6 +109,7 @@ public class RunUAMScenario {
 		// unless a config's DiscreteModeChoice.tripEstimator actually
 		// references it (see net.bhl.matsim.uam.dmc.IdfStyleTripEstimator).
 		controler.addOverridingModule(new IdfUtilityModelExtension());
+		controler.addOverridingModule(new ThetaExportModule());
 
 		controler.addOverridingModule(new UAMModule(config));
 		controler.addOverridingQSimModule(new UAMSpeedModule());
