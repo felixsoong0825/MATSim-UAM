@@ -48,7 +48,7 @@ public final class RunThetaRouteSkim {
 	private static final double VERTICAL_SPEED_M_S = 5.0;
 
 	private record Site(String id, double x, double y, double vtolZ, double groundSpeed,
-			double preflight, double postflight, Node roadNode) {}
+			double preflight, double postflight, double defaultWaitTime, Node roadNode) {}
 	private record Demand(String key, String origin, String destination, int hour, double dMax) {}
 
 	private RunThetaRouteSkim() {}
@@ -139,12 +139,25 @@ public final class RunThetaRouteSkim {
 					ModeTime accessLeg = access.get(j);
 					double flight = distance(a.x, a.y, b.x, b.y) / CRUISE_SPEED_M_S
 							+ (a.vtolZ + b.vtolZ) / VERTICAL_SPEED_M_S;
-					double egressDeparture = departure + accessLeg.seconds + a.preflight + flight;
+					// Origin station wait (2026-09-15): the real router
+					// (UAMCachedIntermodalRoutingModule) adds a wait-for-an-
+					// available-vehicle term between preflight and the
+					// flight leg -- live waiting-time data comes from that
+					// simulation's own dispatcher and isn't available to
+					// this standalone prediction tool, so this uses each
+					// station's own defaultWaitTime, exactly the fallback
+					// the real router itself uses whenever live data isn't
+					// available (see its catch blocks). Previously omitted
+					// entirely, which both understated total UAM duration
+					// and queried the wrong theta time-bin for the egress
+					// car leg (egressDeparture too early by this amount).
+					double egressDeparture = departure + accessLeg.seconds + a.preflight + a.defaultWaitTime + flight;
 					double connector = distance(b.x, b.y, b.roadNode.getCoord()) / b.groundSpeed;
 					double car = connector + routeSeconds(router, b.roadNode, toNode, egressDeparture + connector);
 					double walk = distance(new Coord(b.x, b.y), toCoord) * walkFactor / walkSpeed;
 					ModeTime egress = car <= walk ? new ModeTime("car", car) : new ModeTime("walk", walk);
-					double total = accessLeg.seconds + a.preflight + flight + b.postflight + egress.seconds;
+					double total = accessLeg.seconds + a.preflight + a.defaultWaitTime + flight + b.postflight
+							+ egress.seconds;
 					writer.write(csv(demand.key, demand.origin, demand.destination,
 							Integer.toString(demand.hour), Double.toString(demand.dMax), Double.toString(directCar),
 							j, jp, accessLeg.mode, Double.toString(accessLeg.seconds), Double.toString(flight),
@@ -194,7 +207,7 @@ public final class RunThetaRouteSkim {
 			double x = number(row, "x"), y = number(row, "y");
 			String id = row.get("station_id");
 			out.put(id, new Site(id, x, y, number(row, "vtol_z"), number(row, "ground_access_freespeed"),
-					number(row, "preflighttime"), number(row, "postflighttime"),
+					number(row, "preflighttime"), number(row, "postflighttime"), number(row, "defaultwaittime"),
 					NetworkUtils.getNearestNode(road, new Coord(x, y))));
 		}
 		return out;
@@ -244,6 +257,24 @@ public final class RunThetaRouteSkim {
 	}
 
 	private static String csv(String... fields) {
-		return String.join(",", fields);
+		StringBuilder line = new StringBuilder();
+		for (int i = 0; i < fields.length; i++) {
+			if (i > 0) line.append(',');
+			line.append(quote(fields[i]));
+		}
+		return line.toString();
+	}
+
+	// RFC4180 minimal quoting (2026-09-15): every field written here is
+	// currently a station/zone/trip id or a plain number, none of which
+	// contain a comma or quote today, but writing plain String.join(",",
+	// fields) meant this format was never actually SAFE against one --
+	// Python's own reader (java_route_skims.py's csv.DictReader) already
+	// assumes proper CSV quoting, so this closes the gap on the writer side
+	// to match rather than relying on the input data never containing a
+	// comma.
+	private static String quote(String field) {
+		if (field.indexOf(',') < 0 && field.indexOf('"') < 0 && field.indexOf('\n') < 0) return field;
+		return '"' + field.replace("\"", "\"\"") + '"';
 	}
 }
