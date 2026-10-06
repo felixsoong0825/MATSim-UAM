@@ -45,6 +45,7 @@ import net.bhl.matsim.uam.infrastructure.readers.UAMXMLReader;
 import net.bhl.matsim.uam.listeners.UAMListener;
 import net.bhl.matsim.uam.listeners.UAMShutdownListener;
 import net.bhl.matsim.uam.qsim.UAMQSimModule;
+import net.bhl.matsim.uam.router.UAMAnalysisMainModeIdentifier;
 import net.bhl.matsim.uam.router.UAMMainModeIdentifier;
 import net.bhl.matsim.uam.router.UAMRoutingModuleProvider;
 import net.bhl.matsim.uam.scoring.UAMScoringFunctionFactory;
@@ -106,7 +107,14 @@ public class UAMModule extends AbstractDvrpModeModule {
 		// mode-share reporting) -- without this it falls back to
 		// DefaultAnalysisMainModeIdentifier, which throws "unknown modes" for
 		// uam/access_uam_car/egress_uam_car legs.
-		bind(AnalysisMainModeIdentifier.class).toInstance(uamMainModeIdentifier);
+		//
+		// The ANALYSIS identifier is UAMAnalysisMainModeIdentifier, not the
+		// UAMMainModeIdentifier(MainModeIdentifierImpl) used for routing above
+		// (2026-09-21): the legacy one reported every pt trip as "walk". See that
+		// class for the full reasoning and the measured fallback counts. Only
+		// reporting changes; routing/replanning keeps the binding above.
+		bind(AnalysisMainModeIdentifier.class)
+				.toInstance(new UAMAnalysisMainModeIdentifier(new MainModeIdentifierImpl()));
 
 		// here we provide vehicles and network to be used for uam trips
 		// bind(VehicleType.class).annotatedWith(Names.named(UAMConstants.uam))
