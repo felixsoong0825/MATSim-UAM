@@ -126,10 +126,9 @@ public class RunUAMScenario {
 			UAMQSimModule.activateModes().configure(configurator);
 		});
 
-		if (hasRealTransit) {
-			controler.getConfig().transit().setUseTransit(true);
-			controler.getConfig().transit().setUsingTransitInMobsim(true);
-		}
+		// Keep the scenario's transit execution policy. A real schedule is
+		// needed for routing even when transit vehicles are not simulated.
+		// In particular, Munich's baseline explicitly disables transit mobsim.
 		controler.getConfig().qsim().setSimStarttimeInterpretation(StarttimeInterpretation.onlyUseStarttime);
 		controler.getConfig().qsim().setStartTime(0.0);
 
